@@ -1,0 +1,4 @@
+{
+    "presets": [ [ "env", { "targets": { "node": "current", "browser": "> 5%" }, "exclude": [ "transform-es2015-classes" ] } ], "react" ],
+    "plugins": [ "transform-runtime", "transform-decorators-legacy", "transform-class-properties", "transform-object-rest-spread", [ "module-resolver", { "alias": { "@cideditor/cid": "./sources" } } ] ]
+}
