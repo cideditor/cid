@@ -1,17 +1,19 @@
-import { WINDOW_SPLIT, WINDOW_KILL }                        from '@cideditor/cid/actions';
-import { viewSet, windowSet, windowSetActive, windowUnset } from '@cideditor/cid/actions';
-import { ViewEntry }                                        from '@cideditor/cid/reducers/viewRegistry';
-import { WindowEntry }                                      from '@cideditor/cid/reducers/windowRegistry';
-import { atomicBatch }                                      from '@cideditor/cid/utils/atomicBatch';
+import { WINDOW_MOVE_ACTIVE_LEFT, WINDOW_MOVE_ACTIVE_RIGHT, WINDOW_MOVE_ACTIVE_UP, WINDOW_MOVE_ACTIVE_DOWN } from '@cideditor/cid/actions';
+import { WINDOW_SPLIT, WINDOW_KILL, WINDOW_MOVE_ACTIVE }                                                     from '@cideditor/cid/actions';
+import { viewSet, windowSet, windowSetActive, windowUnset }                                                  from '@cideditor/cid/actions';
+import { ViewEntry }                                                                                         from '@cideditor/cid/reducers/viewRegistry';
+import { WindowEntry }                                                                                       from '@cideditor/cid/reducers/windowRegistry';
+import { atomicBatch }                                                                                       from '@cideditor/cid/utils/atomicBatch';
 
-import { put, select, takeEvery }                           from 'redux-saga/effects';
+import { put, select, takeEvery }                                                                            from 'redux-saga/effects';
 
 export function * windowManager() {
 
     yield [
 
         takeEvery(WINDOW_SPLIT, splitWindow),
-        takeEvery(WINDOW_KILL, killWindow)
+        takeEvery(WINDOW_KILL, killWindow),
+        takeEvery(WINDOW_MOVE_ACTIVE, moveActiveWindow)
 
     ];
 
@@ -48,18 +50,20 @@ function * splitWindow(action) {
         let firstNewWindow = new WindowEntry({
             id: autoIncrementWindow++,
             type: WindowEntry.WINDOW_TYPE_VIEW,
+            parentId: window.id,
             viewId: window.viewId
         });
 
         let secondNewWindow = new WindowEntry({
             id: autoIncrementWindow++,
             type: WindowEntry.WINDOW_TYPE_VIEW,
+            parentId: window.id,
             viewId: newView.id
         });
 
-        let updatedWindow = new WindowEntry({
-            id: window.id,
+        let updatedWindow = window.merge({
             type: action.splitType,
+            viewId: null,
             childrenIds: new Immutable.List([ firstNewWindow.id, secondNewWindow.id ])
         });
 
@@ -69,9 +73,11 @@ function * splitWindow(action) {
         yield put(windowSet(secondNewWindow));
         yield put(windowSet(updatedWindow));
 
-        yield put(windowSetActive(secondNewWindow.id));
+        yield put(windowSetActive(firstNewWindow.id));
 
     });
+
+    console.log(yield select(state => state.windowRegistry.entries.toJS()));
 
 }
 
@@ -97,7 +103,7 @@ function * killWindow(action) {
 
     yield * atomicBatch(function * () {
 
-        yield put(windowSet(sibling.merge({ id: parent.id })));
+        yield put(windowSet(sibling.merge({ id: parent.id, parentId: parent.parentId })));
 
         yield put(windowUnset(parent.childrenIds.get(0)));
         yield put(windowUnset(parent.childrenIds.get(1)));
@@ -105,5 +111,48 @@ function * killWindow(action) {
         yield put(windowSetActive(parent.id));
 
     });
+
+}
+
+function * moveActiveWindow(action) {
+
+    let checkParent;
+    let getSiblingId;
+
+    switch (action.direction) {
+
+        case WINDOW_MOVE_ACTIVE_LEFT: {
+            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_ROW && parent.childrenIds.indexOf(child.id) !== 0;
+            getSiblingId = (parent, child) => parent.childrenIds.get(parent.childrenIds.indexOf(child.id) - 1);
+        } break;
+
+        case WINDOW_MOVE_ACTIVE_RIGHT: {
+            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_ROW && parent.childrenIds.indexOf(child.id) !== parent.childrenIds.length - 1;
+            getSiblingId = (parent, child) => parent.childrenIds.get(parent.childrenIds.indexOf(child.id) + 1);
+        } break;
+
+        case WINDOW_MOVE_ACTIVE_UP: {
+            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_COLUMN && parent.childrenIds.indexOf(child.id) !== 0;
+            getSiblingId = (parent, child) => parent.childrenIds.get(parent.childrenIds.indexOf(child.id) - 1);
+        } break;
+
+        case WINDOW_MOVE_ACTIVE_DOWN: {
+            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_COLUMN && parent.childrenIds.indexOf(child.id) !== parent.childrenIds.length - 1;
+            getSiblingId = (parent, child) => parent.childrenIds.get(parent.childrenIds.indexOf(child.id) + 1);
+        } break;
+
+    }
+
+    let child = yield select(state => state.windowRegistry.entries.get(action.windowId));
+    let parent = child.parentId !== null ? yield select(state => state.windowRegistry.entries.get(child.parentId)) : null;
+
+    while (parent && !checkParent(parent, child)) {
+        child = parent;
+        parent = select.parentId !== null ? yield select(state => state.windowRegistry.entries.get(child.parentId)) : null;
+    }
+
+    if (parent) {
+        yield put(windowSetActive(getSiblingId(parent, child)));
+    }
 
 }

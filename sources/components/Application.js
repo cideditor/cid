@@ -1,5 +1,7 @@
 import { windowSetActive, windowSplit, windowKill } from '@cideditor/cid/actions';
 import { WindowEntry }                              from '@cideditor/cid/reducers/windowRegistry';
+import { windowShortcuts }                          from '@cideditor/cid/shortcuts';
+import { applyShortcuts }                           from '@cideditor/cid/utils/applyShortcuts';
 import { connect }                                  from '@cideditor/cid/utils/decorators';
 
 import * as ReactTerm                               from '@manaflair/mylittledom/term/react';
@@ -40,7 +42,9 @@ export class Application extends React.PureComponent {
 
     let isActiveWindow = state.activeWindowId === window.id;
 
-    return { window, view, isActiveWindow };
+    let popup = isActiveWindow ? state.activePopup : null;
+
+    return { window, view, popup, isActiveWindow };
 
 })
 
@@ -95,8 +99,11 @@ class Window extends React.PureComponent {
         if (this.props.view)
             this.main.appendChild(this.props.view.container);
 
-        if (this.props.isActiveWindow && focused) {
+        if (focused)
             focused.focus();
+
+        if (this.props.isActiveWindow && this.props.window.type !== WindowEntry.WINDOW_TYPE_VIEW) {
+            this.requestActivate();
         }
 
     }
@@ -114,11 +121,11 @@ class Window extends React.PureComponent {
         switch (this.props.window.type) {
 
             case WindowEntry.WINDOW_TYPE_COLUMN: {
-                return null;//<div style={{ flex: null, width: `100%`, height: 1, backgroundColor: `white`, backgroundCharacter: `·`, color: `#888888` }} />;
+                return null;
             } break;
 
             case WindowEntry.WINDOW_TYPE_ROW: {
-                return <div style={{ flex: null, width: 2, height: `100%`, backgroundColor: `lightgrey` }} />;
+                return <div style={{ flex: null, width: 2, height: `100%`, backgroundColor: `#333333` }} />;
             } break;
 
         }
@@ -142,23 +149,6 @@ class Window extends React.PureComponent {
             } break;
 
         }
-
-    }
-
-    getShortcuts() {
-
-        return {
-
-            [`ctrl-x /`]: this.handleColumnSplitShortcut,
-            [`ctrl-x :`]: this.handleRowSplitShortcut,
-            [`ctrl-x 0`]: this.handleKillWindowShortcut,
-
-            [`alt-left`]: this.handleGotoLeftShortcut,
-            [`alt-right`]: this.handleGotoRightShortcut,
-            [`alt-up`]: this.handleGotoUpShortcut,
-            [`alt-down`]: this.handleGotoDownShortcut
-
-        };
 
     }
 
@@ -210,7 +200,7 @@ class Window extends React.PureComponent {
 
         } else {
 
-            this.props.dispatch(windowSetActive(this.props.windowId));
+            this.props.dispatch(windowSetActive(this.props.window.id));
 
         }
 
@@ -232,147 +222,12 @@ class Window extends React.PureComponent {
 
     }
 
-    @autobind handleColumnSplitShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.dispatch(windowSplit(this.props.windowId, { splitType: WindowEntry.WINDOW_TYPE_COLUMN }));
-
-        });
-
-    }
-
-    @autobind handleRowSplitShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.dispatch(windowSplit(this.props.windowId, { splitType: WindowEntry.WINDOW_TYPE_ROW }));
-
-        });
-
-    }
-
-    @autobind handleKillWindowShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.dispatch(windowKill(this.props.windowId));
-
-        });
-
-    }
-
-    @autobind handleGotoLeftShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.onGotoLeft(this.props.windowId);
-
-        });
-
-    }
-
-    @autobind handleGotoRightShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.onGotoRight(this.props.windowId);
-
-        });
-
-    }
-
-    @autobind handleGotoUpShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.onGotoUp(this.props.windowId);
-
-        });
-
-    }
-
-    @autobind handleGotoDownShortcut(e) {
-
-        e.setDefault(() => {
-
-            this.props.onGotoDown(this.props.windowId);
-
-        });
-
-    }
-
-    @autobind handleGotoLeft(windowId) {
-
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_ROW)
-            return this.props.onGotoLeft(this.props.windowId);
-
-        let index = this.props.window.childrenIds.indexOf(windowId);
-
-        if (index === 0)
-            return this.props.onGotoLeft(this.props.windowId);
-
-        let window = this.children.get(this.props.window.childrenIds.get(index - 1));
-
-        window.getWrappedInstance().requestActivate();
-
-    }
-
-
-    @autobind handleGotoRight(windowId) {
-
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_ROW)
-            return this.props.onGotoRight(this.props.windowId);
-
-        let index = this.props.window.childrenIds.indexOf(windowId);
-
-        if (index === this.props.window.childrenIds.size - 1)
-            return this.props.onGotoRight(this.props.windowId);
-
-        let window = this.children.get(this.props.window.childrenIds.get(index + 1));
-
-        window.getWrappedInstance().requestActivate();
-
-    }
-
-    @autobind handleGotoUp(windowId) {
-
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_COLUMN)
-            return this.props.onGotoUp(this.props.windowId);
-
-        let index = this.props.window.childrenIds.indexOf(windowId);
-
-        if (index === 0)
-            return this.props.onGotoUp(this.props.windowId);
-
-        let window = this.children.get(this.props.window.childrenIds.get(index - 1));
-
-        window.getWrappedInstance().requestActivate();
-
-    }
-
-    @autobind handleGotoDown(windowId) {
-
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_COLUMN)
-            return this.props.onGotoDown(this.props.windowId);
-
-        let index = this.props.window.childrenIds.indexOf(windowId);
-
-        if (index === this.props.window.childrenIds.size - 1)
-            return this.props.onGotoDown(this.props.windowId);
-
-        let window = this.children.get(this.props.window.childrenIds.get(index + 1));
-
-        window.getWrappedInstance().requestActivate();
-
-    }
-
     @autobind handleFocusCapture(e) {
 
         if (this.props.window.type !== WindowEntry.WINDOW_TYPE_VIEW)
             return;
 
-        this.props.dispatch(windowSetActive(this.props.windowId));
+        this.props.dispatch(windowSetActive(this.props.window.id));
 
     }
 
@@ -390,9 +245,7 @@ class Window extends React.PureComponent {
                 let windowId = this.props.window.childrenIds.get(t);
 
                 if (separator && t > 0) subViewComponents.push(React.cloneElement(separator, {
-
                     key: `separator-${t}`
-
                 }));
 
                 subViewComponents.push(<WrapperComponent
@@ -417,7 +270,8 @@ class Window extends React.PureComponent {
 
         } else {
 
-            return <div ref={this.registerMainRef} style={{ ... this.props.style, flex: 1, width: `100%`, height: `100%` }} onShortcuts={this.getShortcuts()} onFocusCapture={this.handleFocusCapture}>
+            return <div ref={this.registerMainRef} style={{ ... this.props.style, flex: 1, width: `100%`, height: `100%` }} onShortcuts={applyShortcuts(windowShortcuts, { windowId: this.props.window.id, dispatch: this.props.dispatch })} onFocusCapture={this.handleFocusCapture}>
+                {this.props.popup}
             </div>;
 
         }

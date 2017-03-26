@@ -83,7 +83,20 @@ export class EditorView extends React.PureComponent {
 
             />
 
-            <div style={{ flex: null, width: `100%`, height: 1,  backgroundColor: `lightgrey` }}>
+            <div style={{ flexDirection: `row`, flex: null, width: `100%`, height: 1,  backgroundColor: this.props.isActiveWindow ? `#CCCCCC` : `#333333`, color: this.props.isActiveWindow ? `#000000` : `#FFFFFF` }}>
+
+                <text style={{ flex: null }}
+                    textContent={`[${grammar}]`}
+                />
+
+                <text style={{ margin: [ 0, 1 ], flex: null, padding: [ 0, 1 ], background: `white`, color: `black` }}
+                    textContent={this.props.buffer.name}
+                />
+
+                <text style={{ flex: null }}
+                    textContent={`(${this.state.caret.y}:${this.state.caret.x})`}
+                />
+
             </div>
 
         </div>;

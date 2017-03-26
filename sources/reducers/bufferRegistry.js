@@ -5,6 +5,7 @@ export class BufferEntry extends new Immutable.Record({
 
     id: null,
 
+    name: `*Untitled*`,
     path: null,
 
     grammar: null,

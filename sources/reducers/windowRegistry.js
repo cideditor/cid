@@ -8,6 +8,7 @@ export class WindowEntry extends new Immutable.Record({
 
     viewId: null,
 
+    parentId: null,
     childrenIds: null
 
 }) {
