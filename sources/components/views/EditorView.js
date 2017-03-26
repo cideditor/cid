@@ -6,9 +6,9 @@ import { connect }        from 'react-redux';
 
 @connect((state, props) => {
 
-    let window = state.windowRegistry.getWindowByView(props.viewId);
-    let view = state.viewRegistry.entries.get(props.viewId);
-    let buffer = state.bufferRegistry.entries.get(props.bufferId);
+    let window = state.windowRegistry.getByViewId(props.viewId);
+    let view = state.viewRegistry.getById(props.viewId);
+    let buffer = state.bufferRegistry.getById(props.bufferId);
 
     let isActiveWindow = window ? state.activeWindowId === window.id : false;
 

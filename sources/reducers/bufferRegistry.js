@@ -31,6 +31,15 @@ export class BufferRegistry extends new Immutable.Record({
 
     }
 
+    getById(bufferId) {
+
+        if (bufferId === null)
+            return null;
+
+        return this.entries.get(bufferId);
+
+    }
+
 }
 
 export function bufferRegistry(state = new BufferRegistry(), action) {

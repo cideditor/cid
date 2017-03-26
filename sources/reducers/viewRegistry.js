@@ -39,6 +39,15 @@ export class ViewRegistry extends new Immutable.Record({
 
     }
 
+    getById(viewId) {
+
+        if (viewId === null)
+            return null;
+
+        return this.entries.get(viewId);
+
+    }
+
 }
 
 export function viewRegistry(state = new ViewRegistry(), action) {

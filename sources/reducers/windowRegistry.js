@@ -39,7 +39,19 @@ export class WindowRegistry extends new Immutable.Record({
 
     }
 
-    getWindowByView(viewId) {
+    getById(windowId) {
+
+        if (windowId === null)
+            return null;
+
+        return this.entries.get(windowId);
+
+    }
+
+    getByViewId(viewId) {
+
+        if (viewId === null)
+            return null;
 
         return this.entries.find(window => {
 

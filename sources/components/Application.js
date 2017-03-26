@@ -37,8 +37,8 @@ export class Application extends React.PureComponent {
 
 @connect((state, props) => {
 
-    let window = state.windowRegistry.entries.get(props.windowId);
-    let view = window.viewId !== null ? state.viewRegistry.entries.get(window.viewId) : null;
+    let window = state.windowRegistry.getById(props.windowId);
+    let view = state.viewRegistry.getById(window.viewId);
 
     let isActiveWindow = state.activeWindowId === window.id;
 
@@ -282,7 +282,7 @@ class Window extends React.PureComponent {
 
 @connect((state, props) => {
 
-    let view = state.viewRegistry.entries.get(props.viewId);
+    let view = state.viewRegistry.getById(props.viewId);
 
     return { view };
 

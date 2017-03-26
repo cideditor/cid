@@ -22,14 +22,14 @@ export function * windowManager() {
 function * splitWindow(action) {
 
     let window = yield select(state => {
-        return state.windowRegistry.entries.get(action.windowId);
+        return state.windowRegistry.getById(action.windowId);
     });
 
     if (!window || window.type !== WindowEntry.WINDOW_TYPE_VIEW)
         return;
 
     let view = yield select(state => {
-        return state.viewRegistry.entries.get(window.viewId);
+        return state.viewRegistry.getById(window.viewId);
     });
 
     yield * atomicBatch(function * () {
@@ -77,28 +77,23 @@ function * splitWindow(action) {
 
     });
 
-    console.log(yield select(state => state.windowRegistry.entries.toJS()));
-
 }
 
 function * killWindow(action) {
 
-    if (action.windowId === 0)
-        return;
-
     let window = yield select(state => {
-        return state.windowRegistry.entries.get(action.windowId);
+        return state.windowRegistry.getById(action.windowId);
     });
 
-    if (!window || window.type !== WindowEntry.WINDOW_TYPE_VIEW)
+    if (!window || window.type !== WindowEntry.WINDOW_TYPE_VIEW || window.parentId === null)
         return;
 
     let parent = yield select(state => {
-        return state.windowRegistry.entries.find(other => other.childrenIds && other.childrenIds.includes(window.id));
+        return state.windowRegistry.getById(window.parentId);
     });
 
     let sibling = yield select(state => {
-        return state.windowRegistry.entries.get(parent.childrenIds.find(id => id !== window.id));
+        return state.windowRegistry.getById(parent.childrenIds.find(id => id !== window.id));
     });
 
     yield * atomicBatch(function * () {
@@ -143,12 +138,18 @@ function * moveActiveWindow(action) {
 
     }
 
-    let child = yield select(state => state.windowRegistry.entries.get(action.windowId));
-    let parent = child.parentId !== null ? yield select(state => state.windowRegistry.entries.get(child.parentId)) : null;
+    let child = yield select(state => {
+        return state.windowRegistry.getById(action.windowId);
+    });
+
+    let parent = child.parentId !== null ? yield select(state => {
+        return state.windowRegistry.getById(child.parentId);
+    }) : null;
 
     while (parent && !checkParent(parent, child)) {
-        child = parent;
-        parent = select.parentId !== null ? yield select(state => state.windowRegistry.entries.get(child.parentId)) : null;
+        child = parent; parent = select.parentId !== null ? yield select(state => {
+            return state.windowRegistry.getById(child.parentId);
+        }) : null;
     }
 
     if (parent) {
