@@ -122,7 +122,7 @@ function * moveActiveWindow(action) {
         } break;
 
         case WINDOW_MOVE_ACTIVE_RIGHT: {
-            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_ROW && parent.childrenIds.indexOf(child.id) !== parent.childrenIds.length - 1;
+            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_ROW && parent.childrenIds.indexOf(child.id) !== parent.childrenIds.size - 1;
             getSiblingId = (parent, child) => parent.childrenIds.get(parent.childrenIds.indexOf(child.id) + 1);
         } break;
 
@@ -132,7 +132,7 @@ function * moveActiveWindow(action) {
         } break;
 
         case WINDOW_MOVE_ACTIVE_DOWN: {
-            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_COLUMN && parent.childrenIds.indexOf(child.id) !== parent.childrenIds.length - 1;
+            checkParent = (parent, child) => parent.type === WindowEntry.WINDOW_TYPE_COLUMN && parent.childrenIds.indexOf(child.id) !== parent.childrenIds.size - 1;
             getSiblingId = (parent, child) => parent.childrenIds.get(parent.childrenIds.indexOf(child.id) + 1);
         } break;
 

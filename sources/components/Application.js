@@ -99,7 +99,7 @@ class Window extends React.PureComponent {
         if (this.props.view)
             this.main.appendChild(this.props.view.container);
 
-        if (focused)
+        if (this.props.isActiveWindow && focused)
             focused.focus();
 
         if (this.props.isActiveWindow && this.props.window.type !== WindowEntry.WINDOW_TYPE_VIEW) {
