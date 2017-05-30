@@ -1,23 +1,38 @@
-import * as actions    from '@cideditor/cid/actions';
-import { WindowEntry } from '@cideditor/cid/reducers/windowRegistry';
+import * as actions           from '@cideditor/cid/actions';
+import { WINDOW_TYPE }        from '@cideditor/cid/reducers/windowRegistry';
+import { FileSelectorDialog } from '@cideditor/cid/components/dialogs/FileSelectorDialog';
+
+import { put, select }        from 'redux-saga/effects';
 
 export let windowShortcuts = {
 
     [`ctrl-x /`]: ({ windowId, dispatch }) => {
 
-        dispatch(actions.windowSplit(windowId, { splitType: WindowEntry.WINDOW_TYPE_COLUMN }));
+        dispatch(actions.windowSplit(windowId, { splitType: WINDOW_TYPE.COLUMN }));
 
     },
 
     [`ctrl-x :`]: ({ windowId, dispatch }) => {
 
-        dispatch(actions.windowSplit(windowId, { splitType: WindowEntry.WINDOW_TYPE_ROW }));
+        dispatch(actions.windowSplit(windowId, { splitType: WINDOW_TYPE.ROW }));
 
     },
 
     [`ctrl-x 0`]: ({ windowId, dispatch }) => {
 
         dispatch(actions.windowKill(windowId));
+
+    },
+
+    [`ctrl-o`]: ({ dispatch, getState }) => {
+
+        dispatch(function * () {
+
+            let path = yield select(state => state.activePath);
+
+            dispatch(actions.dialogOpen(<FileSelectorDialog initialPath={path} />));
+
+        });
 
     },
 

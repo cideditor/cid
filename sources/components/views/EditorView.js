@@ -1,3 +1,4 @@
+import { pathSetActive }  from '@cideditor/cid/actions';
 import { TextEditor }     from '@cideditor/cid/components/TextEditor';
 import { ImmutablePoint } from '@cideditor/cid/utils/ImmutablePoint';
 
@@ -6,13 +7,13 @@ import { connect }        from 'react-redux';
 
 @connect((state, props) => {
 
-    let window = state.windowRegistry.getByViewId(props.viewId);
+    let window = state.windowRegistry.getById(props.windowId);
+    let container = state.containerRegistry.getById(props.containerId);
     let view = state.viewRegistry.getById(props.viewId);
-    let buffer = state.bufferRegistry.getById(props.bufferId);
 
     let isActiveWindow = window ? state.activeWindowId === window.id : false;
 
-    return { window, view, buffer, isActiveWindow };
+    return { window, container, view, isActiveWindow };
 
 })
 
@@ -27,8 +28,19 @@ export class EditorView extends React.PureComponent {
 
     componentDidMount() {
 
+        if (this.props.isActiveWindow)
+            this.props.dispatch(pathSetActive(this.props.view.descriptor));
+
         if (this.props.isActiveWindow) {
             this.main.focus();
+        }
+
+    }
+
+    componentWillReceiveProps(nextProps) {
+
+        if (this.props.isActiveWindow) {
+            this.props.dispatch(pathSetActive(this.props.view.descriptor));
         }
 
     }
@@ -65,7 +77,7 @@ export class EditorView extends React.PureComponent {
 
     render() {
 
-        let { grammar, theme, textBuffer } = this.props.buffer;
+        let { grammar, theme, textBuffer } = this.props.view;
 
         return <div style={{ width: `100%`, height: `100%` }}>
 
@@ -90,7 +102,7 @@ export class EditorView extends React.PureComponent {
                 />
 
                 <text style={{ margin: [ 0, 1 ], flex: null, padding: [ 0, 1 ], background: `white`, color: `black` }}
-                    textContent={this.props.buffer.name}
+                    textContent={this.props.view.name}
                 />
 
                 <text style={{ flex: null }}

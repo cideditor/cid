@@ -1,4 +1,5 @@
 import { windowSetActive, windowSplit, windowKill } from '@cideditor/cid/actions';
+import { WINDOW_TYPE }                              from '@cideditor/cid/reducers/windowRegistry';
 import { WindowEntry }                              from '@cideditor/cid/reducers/windowRegistry';
 import { windowShortcuts }                          from '@cideditor/cid/shortcuts';
 import { applyShortcuts }                           from '@cideditor/cid/utils/applyShortcuts';
@@ -11,9 +12,7 @@ import { autobind }                                 from 'core-decorators';
 
 @connect((state, props) => {
 
-    let viewIds = state.viewRegistry.entries.keySeq();
-
-    return { viewIds };
+    return { containerRegistry: state.containerRegistry };
 
 })
 
@@ -23,10 +22,10 @@ export class Application extends React.PureComponent {
 
         return <div style={{ width: `100%`, height: `100%` }}>
 
-            <Window windowId={0} />
+            <Window windowId={1} />
 
-            {this.props.viewIds.map(viewId =>
-                <View key={viewId} viewId={viewId} />
+            {this.props.containerRegistry.idSeq().map(containerId =>
+                <Container key={containerId} containerId={containerId} />
             )}
 
         </div>;
@@ -38,13 +37,13 @@ export class Application extends React.PureComponent {
 @connect((state, props) => {
 
     let window = state.windowRegistry.getById(props.windowId);
-    let view = state.viewRegistry.getById(window.viewId);
+    let container = state.containerRegistry.getById(window.containerId);
 
     let isActiveWindow = state.activeWindowId === window.id;
 
-    let popup = isActiveWindow ? state.activePopup : null;
+    let activeDialog = isActiveWindow && state.dialogStack.size > 0 ? state.dialogStack.first() : null;
 
-    return { window, view, popup, isActiveWindow };
+    return { window, container, isActiveWindow, activeDialog };
 
 })
 
@@ -72,16 +71,20 @@ class Window extends React.PureComponent {
 
         super(props);
 
+        this.main = null;
+        this.container = null;
         this.children = new Map();
 
     }
 
     componentDidMount() {
 
-        let focused = this.props.view ? this.props.view.container.rootNode.activeElement : null;
+        let focused = this.props.container
+            ? this.props.container.element.rootNode.activeElement
+            : null;
 
-        if (this.props.view)
-            this.main.appendChild(this.props.view.container);
+        if (this.props.container)
+            this.container.appendChild(this.props.container.element);
 
         if (this.props.isActiveWindow && focused) {
             focused.focus();
@@ -91,13 +94,15 @@ class Window extends React.PureComponent {
 
     componentDidUpdate(prevProps) {
 
-        let focused = this.main ? this.main.rootNode.activeElement : null;
+        let focused = this.main
+            ? this.main.rootNode.activeElement
+            : null;
 
-        if (prevProps.view && this.props.view !== prevProps.view && prevProps.view.container.parentNode === this.main)
-            this.main.removeChild(prevProps.view.container);
+        if (prevProps.container && this.props.container !== prevProps.container && prevProps.container.element.parentNode === this.main)
+            this.container.removeChild(prevProps.container.element);
 
-        if (this.props.view)
-            this.main.appendChild(this.props.view.container);
+        if (this.props.container)
+            this.container.appendChild(this.props.container.element);
 
         if (this.props.isActiveWindow && focused)
             focused.focus();
@@ -110,8 +115,8 @@ class Window extends React.PureComponent {
 
     componentWillUnmount() {
 
-        if (this.props.view && this.props.view.container.parentNode === this.main) {
-            this.main.removeChild(this.props.view.container);
+        if (this.props.container && this.props.container.element.parentNode === this.main) {
+            this.container.removeChild(this.props.container);
         }
 
     }
@@ -120,11 +125,11 @@ class Window extends React.PureComponent {
 
         switch (this.props.window.type) {
 
-            case WindowEntry.WINDOW_TYPE_COLUMN: {
+            case WINDOW_TYPE.COLUMN: {
                 return null;
             } break;
 
-            case WindowEntry.WINDOW_TYPE_ROW: {
+            case WINDOW_TYPE.ROW: {
                 return <div style={{ flex: null, width: 2, height: `100%`, backgroundColor: `#333333` }} />;
             } break;
 
@@ -136,11 +141,11 @@ class Window extends React.PureComponent {
 
         switch (this.props.window.type) {
 
-            case WindowEntry.WINDOW_TYPE_COLUMN: {
+            case WINDOW_TYPE.COLUMN: {
                 return `column`;
             } break;
 
-            case WindowEntry.WINDOW_TYPE_ROW: {
+            case WINDOW_TYPE.ROW: {
                 return `row`;
             } break;
 
@@ -163,7 +168,7 @@ class Window extends React.PureComponent {
 
     requestActivate() {
 
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_VIEW) {
+        if (this.props.window.type !== WINDOW_TYPE.VIEW) {
 
             if (this.props.window.childrenIds.size === 0)
                 return;
@@ -212,6 +217,12 @@ class Window extends React.PureComponent {
 
     }
 
+    @autobind registerContainerRef(container) {
+
+        this.container = container;
+
+    }
+
     @autobind registerChildRef(windowId, child) {
 
         if (child) {
@@ -224,7 +235,7 @@ class Window extends React.PureComponent {
 
     @autobind handleFocusCapture(e) {
 
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_VIEW)
+        if (this.props.window.type !== WINDOW_TYPE.VIEW)
             return;
 
         this.props.dispatch(windowSetActive(this.props.window.id));
@@ -233,7 +244,7 @@ class Window extends React.PureComponent {
 
     render() {
 
-        if (this.props.window.type !== WindowEntry.WINDOW_TYPE_VIEW) {
+        if (this.props.window.type !== WINDOW_TYPE.VIEW) {
 
             let separator = this.getSeparator();
 
@@ -271,7 +282,15 @@ class Window extends React.PureComponent {
         } else {
 
             return <div ref={this.registerMainRef} style={{ ... this.props.style, flex: 1, width: `100%`, height: `100%` }} onShortcuts={applyShortcuts(windowShortcuts, { windowId: this.props.window.id, dispatch: this.props.dispatch })} onFocusCapture={this.handleFocusCapture}>
-                {this.props.popup}
+
+                {this.props.activeDialog && <div style={{ position: `absolute`, left: 2, right: 2, top: 1 }}>
+                    {this.props.activeDialog}
+                </div>}
+
+               <div ref={this.registerContainerRef} style={{ flex: 1, width: `100%`, height: `100%` }}>
+                    {/* this.props.container.element will be inserted here */}
+                </div>
+
             </div>;
 
         }
@@ -282,21 +301,26 @@ class Window extends React.PureComponent {
 
 @connect((state, props) => {
 
-    let view = state.viewRegistry.getById(props.viewId);
+    let window = state.windowRegistry.getByContainerId(props.containerId);
+    let container = state.containerRegistry.getById(props.containerId);
+    let view = container ? state.viewRegistry.getById(container.viewId) : null;
 
-    return { view };
+    return { window, container, view };
 
 })
 
-class View extends React.PureComponent {
+class Container extends React.PureComponent {
 
     render() {
 
-        let { component, container } = this.props.view;
+        if (!this.props.view || !this.props.view.component)
+            return null;
 
-        return ReactTerm.createPortal(React.cloneElement(component, {
-            viewId: this.props.viewId
-        }), container);
+        return ReactTerm.createPortal(React.cloneElement(this.props.view.component, {
+            windowId: this.props.window ? this.props.window.id : null,
+            containerId: this.props.container.id,
+            viewId: this.props.view.id,
+        }), this.props.container.element);
 
     }
 

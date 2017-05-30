@@ -15,6 +15,7 @@ import Suggester              from 'suggester';
         absolute: React.PropTypes.bool,
         autofocus: React.PropTypes.string,
 
+        onBlur: React.PropTypes.func,
         onChange: React.PropTypes.func
 
     },
@@ -48,6 +49,12 @@ export class TypeAhead extends React.PureComponent {
         super(props);
 
         this.state.value = props.value;
+
+    }
+
+    @autobind handleInputBlur() {
+
+        this.props.onBlur();
 
     }
 
@@ -118,6 +125,7 @@ export class TypeAhead extends React.PureComponent {
 
                 autofocus={this.props.autofocus}
 
+                onBlur={this.handleInputBlur}
                 onChange={this.handleInputChange}
 
                 onShortcuts={{

@@ -25,7 +25,7 @@ export class TextEditor extends React.PureComponent {
         onScroll: React.PropTypes.func,
         onChange: React.PropTypes.func,
 
-        autofocus: React.PropTypes.oneOfType([ React.PropTypes.bool, React.PropTypes.string ])
+        autofocus: React.PropTypes.string,
 
     };
 

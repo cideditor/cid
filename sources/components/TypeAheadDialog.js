@@ -13,6 +13,7 @@ import { autobind }  from 'core-decorators';
 
         initialValue: React.PropTypes.string,
 
+        onBlur: React.PropTypes.func,
         onSubmit: React.PropTypes.func
 
     },
@@ -45,6 +46,12 @@ export class TypeAheadDialog extends React.PureComponent {
 
     }
 
+    @autobind handleBlur() {
+
+        this.props.onBlur();
+
+    }
+
     @autobind handleSubmit() {
 
         this.props.onSubmit(this.state.value);
@@ -60,7 +67,7 @@ export class TypeAheadDialog extends React.PureComponent {
     render() {
 
         return <form style={{ border: `modern`, ... this.props.style }} onSubmit={this.handleSubmit}>
-            <TypeAhead choices={this.props.choices} value={this.state.value} onChange={this.handleChange} absolute={false} autofocus={`steal`} />
+            <TypeAhead choices={this.props.choices} value={this.state.value} onChange={this.handleChange} onBlur={this.handleBlur} absolute={false} autofocus={`steal`} />
         </form>;
 
     }
